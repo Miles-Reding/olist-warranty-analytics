@@ -1,0 +1,9 @@
+duckdb
+pandas
+numpy
+scipy
+matplotlib
+seaborn
+pyyaml
+jupyter
+kaggle
