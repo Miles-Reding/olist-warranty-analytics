@@ -1,10 +1,10 @@
 # Olist Warranty Pricing & Delivery Analytics
 
 ## Overview
-[one paragraph: what this project does and why]
+
 
 ## Data
-Source: [Olist Brazilian E-Commerce](kaggle link)
+Source: Olist Brazilian E-Commerce(https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce)
 Not included in this repo (see Setup). Currency: BRL, no FX conversion applied unless noted.
 
 ## Setup
@@ -14,7 +14,7 @@ Not included in this repo (see Setup). Currency: BRL, no FX conversion applied u
 4. Notebooks run in numbered order
 
 ## Key limitations
-[fan-out joins, customer_id vs customer_unique_id, currency, date range trimming — the stuff you already know matters]
+[fan-out joins, customer_id vs customer_unique_id, currency, date range trimming]
 
 ## Findings
-[fill in as you go]
+
