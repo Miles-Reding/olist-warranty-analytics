@@ -1,0 +1,14 @@
+scenario,setting,pricing_lever,n_plans,n_capped,avg_price_pct_of_product,held_card_loss_ratio
+BASE,-,False,47,3,0.14946930833693386,0.3861378727633509
+Weibull scale (durability),low (0.75),False,47,9,0.19189508179401568,0.5531332107002885
+Weibull scale (durability),high (1.25),False,47,0,0.11611771693050528,0.2881351839691043
+Weibull shape (wear-out),low (0.8),False,47,4,0.17135212994474683,0.4568033412945976
+Weibull shape (wear-out),high (1.2),False,47,1,0.12726697932516032,0.3152386804819234
+Severity base,low (0.75),False,47,0,0.11724801731655922,0.2896148137898506
+Severity base,high (1.25),False,47,7,0.17465027088885557,0.4826703326331311
+Mfr warranty length,low (-0.5),False,53,5,0.15227582698140843,0.453689886267543
+Mfr warranty length,high (+0.5),False,41,1,0.12718807594699313,0.2835333877773177
+Target loss ratio,low (-0.1),True,47,8,0.18113575585473188,0.3861378727633509
+Target loss ratio,high (+0.1),True,47,0,0.12262467416815312,0.3861378727633509
+Price ceiling (% of product),low (0.2),True,47,11,0.1329322235093637,0.3861378727633509
+Price ceiling (% of product),high (0.4),True,47,0,0.15208119547522414,0.3861378727633509
