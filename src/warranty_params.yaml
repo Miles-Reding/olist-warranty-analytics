@@ -1,0 +1,157 @@
+# Warranty rate card parameters
+#
+# Every assumption behind the rate card lives here, not in code, so the
+# sensitivity analysis in Phase 3 can sweep these without touching logic.
+#
+# ALL PARAMETERS ARE ASSUMED. There is no claims data in Olist. Values are
+# set to plausible consumer-durables ranges and MUST be swept in the
+# sensitivity analysis before any finding is reported as robust.
+#
+# Currency: BRL throughout.
+
+# ---------------------------------------------------------------------------
+# Global commercial rules
+# ---------------------------------------------------------------------------
+global:
+  # Below this product price a service contract costs more to administer
+  # than it can earn. Standard industry practice to set an offer floor.
+  min_product_price_brl: 150.0
+
+  # Target loss ratio: claims paid / premium earned. Extended warranty
+  # programs typically run well below P&C insurance norms because the
+  # product is sold at point of sale with low acquisition cost.
+  # This is THE key profitability lever — sweep it hard in sensitivity.
+  default_target_loss_ratio: 0.40
+
+  # Commercial guardrails applied AFTER modeled price is computed.
+  min_retail_brl: 19.90          # admin floor
+  max_pct_of_product: 0.30       # above this, attach collapses to ~0
+  round_to_multiple: 5.0         # psychological pricing
+  round_offset: 0.10             # produces 24.90, 49.90, 74.90 ...
+
+  # Brazil CDC mandates 90 days legal warranty on durable goods.
+  # Used as the floor when a category carries no manufacturer warranty.
+  legal_warranty_years: 0.25
+
+  # Reference price for the severity decay curve (see severity_decay).
+  severity_reference_price_brl: 300.0
+
+
+# ---------------------------------------------------------------------------
+# Per-category risk and pricing parameters
+# ---------------------------------------------------------------------------
+# weibull_shape (beta):
+#   < 1  decreasing hazard (infant mortality dominant)
+#   = 1  constant hazard (memoryless)
+#   > 1  increasing hazard (wear-out dominant)
+#
+# weibull_scale (eta): characteristic life in YEARS. At t = eta, ~63% of
+#   units have failed. Higher eta = more durable category.
+#
+# severity_base: expected repair cost as a share of product price, at the
+#   reference price point. Capped at 1.0 (replacement).
+#
+# severity_decay: how fast severity-as-share-of-price falls as price rises.
+#   0 = severity scales linearly with price. Higher = more fixed-cost labor.
+#
+# mfr_warranty_years: manufacturer coverage. Extended plan exposure begins
+#   HERE, not at t=0. This is the most consequential parameter in the file.
+#
+# terms_years: total plan length from purchase date, as marketed.
+
+categories:
+
+  electronics:
+    weibull_shape: 1.30
+    weibull_scale: 7.0
+    severity_base: 0.60
+    severity_decay: 0.18
+    mfr_warranty_years: 1.0
+    target_loss_ratio: 0.38
+    terms_years: [1, 2, 3]
+    notes: >
+      Mixed failure modes. Some infant mortality from manufacturing defects,
+      but those land inside the manufacturer window and cost the program
+      nothing. High severity because board-level repair often means
+      replacement.
+
+  appliances:
+    weibull_shape: 2.00
+    weibull_scale: 9.0
+    severity_base: 0.50
+    severity_decay: 0.22
+    mfr_warranty_years: 1.0
+    target_loss_ratio: 0.42
+    terms_years: [2, 3, 5]
+    notes: >
+      Strong wear-out profile: motors, compressors, pumps degrade with use.
+      Hazard rises sharply in later years, which is exactly where extended
+      terms sit. Repair-dominant rather than replace-dominant, and labor is
+      a large fixed share, hence high severity_decay.
+
+  furniture:
+    weibull_shape: 1.50
+    weibull_scale: 13.0
+    severity_base: 0.40
+    severity_decay: 0.25
+    mfr_warranty_years: 0.25
+    target_loss_ratio: 0.45
+    terms_years: [2, 3, 5]
+    notes: >
+      Low intrinsic failure rate; claims are structural defects, frame
+      failure, upholstery. Typically only the CDC legal warranty applies,
+      so program exposure starts at 90 days — much earlier than electronics.
+      That early start partly offsets the low hazard.
+
+  tools_construction:
+    weibull_shape: 1.55
+    weibull_scale: 7.5
+    severity_base: 0.48
+    severity_decay: 0.20
+    mfr_warranty_years: 1.0
+    target_loss_ratio: 0.40
+    terms_years: [1, 2, 3]
+    notes: >
+      Usage-driven rather than age-driven, and usage intensity is
+      unobservable here. Wide uncertainty band — treat outputs as
+      indicative and lean on the sensitivity sweep.
+
+  auto:
+    weibull_shape: 1.60
+    weibull_scale: 6.0
+    severity_base: 0.55
+    severity_decay: 0.15
+    mfr_warranty_years: 0.5
+    target_loss_ratio: 0.40
+    terms_years: [1, 2, 3]
+    notes: >
+      Parts and accessories, not vehicles. Harsh operating environment
+      drives shorter characteristic life than comparable electronics.
+
+  musical_leisure:
+    weibull_shape: 1.35
+    weibull_scale: 8.0
+    severity_base: 0.45
+    severity_decay: 0.20
+    mfr_warranty_years: 0.5
+    target_loss_ratio: 0.40
+    terms_years: [1, 2, 3]
+    notes: >
+      Heterogeneous bucket mixing powered goods (amps, keyboards) with
+      unpowered (acoustic instruments, sports equipment). A blended
+      parameter set is a real weakness here — flag it in the writeup, and
+      consider splitting the bucket if attach modeling proves sensitive.
+
+
+# ---------------------------------------------------------------------------
+# Price band eligibility
+# ---------------------------------------------------------------------------
+# Long terms on cheap goods are administratively uneconomic even when the
+# math produces a positive margin. Bands below the offer floor get no plans.
+band_rules:
+  "0-50":     {offer: false}
+  "50-100":   {offer: false}
+  "100-250":  {offer: true,  max_term_years: 2}
+  "250-500":  {offer: true,  max_term_years: 3}
+  "500-1000": {offer: true,  max_term_years: 5}
+  "1000+":    {offer: true,  max_term_years: 5}

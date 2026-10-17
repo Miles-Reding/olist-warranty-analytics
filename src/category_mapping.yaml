@@ -1,0 +1,162 @@
+# Category rollup: Olist leaf categories -> L1 analytical buckets
+#
+# Buckets are grouped by WARRANTY RISK PROFILE, not merchandising similarity.
+# Powered electronics, mechanical appliances, and soft goods have very
+# different failure hazards and claim severities, so they must not share
+# a bucket even when a retailer would shelve them together.
+#
+# `warranty_eligible: false` marks buckets that would never carry a service
+# contract (consumables, media, perishables). These are excluded from the
+# Phase 3 simulation but retained for the delivery and pricing analyses.
+#
+# NOTE: the Olist translation file contains several misspellings in the
+# SOURCE data ("costruction_tools_garden", "fashio_female_clothing",
+# "home_confort", and a capitalized "Construction_tools_construction").
+# Those are reproduced verbatim below on purpose — do not "fix" them or
+# the join will silently drop rows.
+
+buckets:
+
+  electronics:
+    warranty_eligible: true
+    notes: "High claim severity, high attach propensity. Core warranty category."
+    categories:
+      - computers
+      - computers_accessories
+      - consoles_games
+      - electronics
+      - tablets_printing_image
+      - telephony
+      - fixed_telephony
+      - audio
+      - cine_photo
+
+  appliances:
+    warranty_eligible: true
+    notes: "Mechanical failure modes, wear-out dominant. Long-term risk."
+    categories:
+      - home_appliances
+      - home_appliances_2
+      - small_appliances
+      - small_appliances_home_oven_and_coffee
+      - air_conditioning
+
+  furniture:
+    warranty_eligible: true
+    notes: "Damage/defect rather than failure. Freight-heavy, delivery-damage exposure."
+    categories:
+      - furniture_decor
+      - furniture_bedroom
+      - furniture_living_room
+      - furniture_mattress_and_upholstery
+      - office_furniture
+      - kitchen_dining_laundry_garden_furniture
+      - home_comfort_2
+      - home_confort
+
+  tools_construction:
+    warranty_eligible: true
+    notes: "Powered tools carry failure risk; hand tools near-zero, unless there's a mechanical component."
+    categories:
+      - construction_tools_lights
+      - construction_tools_safety
+      - construction_tools_construction
+      - costruction_tools_garden
+      - costruction_tools_tools
+      - garden_tools
+      - home_construction
+      - signaling_and_security
+      - security_and_services
+
+  auto:
+    warranty_eligible: true
+    notes: "Parts and accessories, not vehicles."
+    categories:
+      - auto
+
+  musical_leisure:
+    warranty_eligible: true
+    notes: "Instruments and sports equipment — mixed powered/unpowered."
+    categories:
+      - musical_instruments
+      - sports_leisure
+
+  home_goods:
+    warranty_eligible: false
+    notes: "Housewares, textiles, decor. No meaningful failure hazard."
+    categories:
+      - bed_bath_table
+      - housewares
+      - la_cuisine
+      - flowers
+      - christmas_supplies
+      - party_supplies
+      - cool_stuff
+      - art
+      - arts_and_craftmanship
+
+  fashion:
+    warranty_eligible: false
+    notes: "watches_gifts is a judgment call — watches ARE warrantable, but the
+             category is mostly gift items. Revisit if attach modeling suffers."
+    categories:
+      - fashion_bags_accessories
+      - fashion_shoes
+      - fashion_male_clothing
+      - fashion_childrens_clothes
+      - fashion_underwear_beach
+      - fashion_sport
+      - fashio_female_clothing
+      - luggage_accessories
+      - watches_gifts
+
+  health_beauty:
+    warranty_eligible: false
+    categories:
+      - health_beauty
+      - perfumery
+      - diapers_and_hygiene
+
+  baby_kids:
+    warranty_eligible: false
+    categories:
+      - baby
+      - toys
+
+  media_stationery:
+    warranty_eligible: false
+    categories:
+      - books_general_interest
+      - books_imported
+      - books_technical
+      - cds_dvds_musicals
+      - dvds_blu_ray
+      - music
+      - stationery
+
+  food_pet:
+    warranty_eligible: false
+    categories:
+      - food
+      - food_drink
+      - drinks
+      - pet_shop
+
+  other:
+    warranty_eligible: false
+    notes: "B2B/marketplace residual. Small volume."
+    categories:
+      - agro_industry_and_commerce
+      - industry_commerce_and_business
+      - market_place
+
+
+# Price bands in BRL, applied at item level.
+# Warranty economics are driven by price tier more than category alone.
+price_bands:
+  - {label: "0-50",     min: 0,    max: 50}
+  - {label: "50-100",   min: 50,   max: 100}
+  - {label: "100-250",  min: 100,  max: 250}
+  - {label: "250-500",  min: 250,  max: 500}
+  - {label: "500-1000", min: 500,  max: 1000}
+  - {label: "1000+",    min: 1000, max: 999999}
