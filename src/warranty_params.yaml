@@ -33,6 +33,14 @@ global:
   # Used as the floor when a category carries no manufacturer warranty.
   legal_warranty_years: 0.25
 
+  # Admin, commission and servicing cost as a share of premium, deducted in
+  # profit figures (sensitivity.py). ASSUMED: neither source pins it down.
+  # Abito & Salant find the retailer's cost (claims + commissions + revenue
+  # share with the provider) is ~54% of warranty price; All Shield's
+  # "50% loss ratio, 40% gross margin, ~20% net" example does not tie out
+  # arithmetically. 15% is a placeholder; swept 5-30%.
+  admin_cost_pct_of_premium: 0.15
+
   # Reference price for the severity decay curve (see severity_decay).
   severity_reference_price_brl: 300.0
 
@@ -141,6 +149,84 @@ categories:
       unpowered (acoustic instruments, sports equipment). A blended
       parameter set is a real weakness here — flag it in the writeup, and
       consider splitting the bucket if attach modeling proves sensitive.
+
+
+# ---------------------------------------------------------------------------
+# Attach-rate model
+# ---------------------------------------------------------------------------
+# Olist has no warranty sales, so attach is an ASSUMED demand model, swept in
+# sensitivity.py like every other parameter here.
+#
+#   attach(plan) = base[cat] x band_multiplier[band] x channel_multiplier
+#                  x 2 / (1 + x^k)  /  n_terms_offered_in_cell
+#                  where x = price_pct / ref_price_pct[cat], k = 2|elasticity|
+#                  (capped at max_attach)
+#   The logistic response equals 1 at the norm (x = 1) with elasticity
+#   price_elasticity there, falls toward 0 as price rises, and saturates at
+#   2x base as price -> 0. A plain power law would explode at low prices and
+#   a hard cap would make demand flat (free to raise price) below the cap.
+#
+# base:       attach at the category's reference price ratio, point-of-sale
+#             channel. Ranges are from the two sources below; midpoints used.
+# ref_price_pct: plan price as a share of product price at which `base`
+#             applies (the "norm" for the category).
+# band_multiplier: attach rises with product price. Abito & Salant Table 2
+#             (TVs): 15% / 18% / 27% / 30% / 35% attach from the cheapest to
+#             the dearest subcategory, vs a 27% mean => ~0.55x to ~1.30x.
+#             Mapped to Olist bands by price-tier ORDER, not by FX.
+#             Overlaps partly with the price-ratio term (cheaper goods also
+#             carry higher plan/product ratios), so treat as a residual.
+# price_elasticity (at the category norm): Abito & Salant's retailer FOC, margin = 1/|elasticity|,
+#             with their estimated 46% retailer margin => |e| ~ 2.2.
+#             Not an All Shield figure: neither source reports one directly.
+# channel_multiplier: Olist is online-only; the base figures are point of sale.
+#             Evidence conflicts: Abito & Salant saw ~4% online vs ~29% in
+#             store (1% of transactions, 2000s retailer site); All Shield puts
+#             online furniture at 20-30% and says embedded checkout adds
+#             15-30% to base (unclear if relative or points). Plausible range
+#             0.15-1.0; 0.5 is a midpoint. THE BIGGEST UNCERTAINTY HERE.
+# term_split: buyers in a category x band pick ONE term; the cell's attach is
+#             divided equally across the terms offered. Equal split is an
+#             assumption (no term-choice data).
+#
+# Sources
+#   AS = Abito & Salant (2018), "The Effect of Product Misperception on
+#        Economic Outcomes: Evidence from the Extended Warranty Market".
+#        One US retailer, 44k transactions, 1998-2004. Peer reviewed.
+#   AllShield = All Shield 2026 Warranty Program ROI Benchmark. Vendor
+#        marketing built from "public-source" ranges; several figures are
+#        marked estimates. Not Brazil-specific.
+attach:
+  channel_multiplier: 0.5
+  price_elasticity: -2.2
+  max_attach: 0.50
+
+  band_multiplier:
+    "100-250":  0.65
+    "250-500":  0.90
+    "500-1000": 1.10
+    "1000+":    1.25
+
+  categories:
+    electronics:
+      base: 0.27          # AS TV 31%, overall 29%; AllShield 20-30% POS
+      ref_price_pct: 0.22 # AS TV 22%; AllShield ~20%
+    appliances:
+      base: 0.25          # AS majors 36% (dated); AllShield 15-25%
+      ref_price_pct: 0.16 # AllShield 14% avg; AS majors 20%
+    furniture:
+      base: 0.30          # AllShield 20-30% online, 20-50% in store
+      ref_price_pct: 0.12 # AllShield 8-15%
+    tools_construction:
+      base: 0.175         # AllShield outdoor power 10-25% (estimate)
+      ref_price_pct: 0.15 # AllShield 10-20%
+    auto:
+      base: 0.20          # weak: AS car audio 40%, but AllShield auto is
+                          # whole-vehicle VSC, not parts. Placeholder.
+      ref_price_pct: 0.20 # AS mobile/car audio 25%
+    musical_leisure:
+      base: 0.21          # AS music/games 21%
+      ref_price_pct: 0.17 # AS 17%
 
 
 # ---------------------------------------------------------------------------

@@ -108,6 +108,27 @@ def apply_guardrails(modeled_price, product_price, g):
     return round(price, 2), was_capped
 
 
+def attach_rate(category, band, price_pct, params, n_terms=1):
+    """Expected share of buyers in a category x band who take THIS plan.
+
+    Demand model, not an estimate: see the `attach` block in
+    warranty_params.yaml for the assumptions and their sources. Returns 0
+    where the category or band has no attach parameters.
+    """
+    a = params["attach"]
+    cat = a["categories"].get(category)
+    band_mult = a["band_multiplier"].get(band)
+    if cat is None or band_mult is None or price_pct <= 0:
+        return 0.0
+    # logistic in price ratio: 1 at the norm, elasticity e there,
+    # -> 2 as price -> 0, -> 0 as price rises (see yaml)
+    k = 2 * abs(a["price_elasticity"])
+    price_response = 2 / (1 + (price_pct / cat["ref_price_pct"]) ** k)
+    attach = (cat["base"] * band_mult * a["channel_multiplier"]
+              * price_response / max(n_terms, 1))
+    return min(attach, a["max_attach"] / max(n_terms, 1))
+
+
 # ---------------------------------------------------------------------------
 # Reference prices from actual transacted data
 # ---------------------------------------------------------------------------
@@ -231,6 +252,23 @@ def build_rate_card(con, params):
                 "price_capped": was_capped,
             })
 
+    # buyers pick one term per cell: split cell attach across offered terms
+    n_terms = {}
+    for p in plans:
+        key = (p["category_l1"], p["price_band"])
+        n_terms[key] = n_terms.get(key, 0) + 1
+    for p in plans:
+        n = n_terms[(p["category_l1"], p["price_band"])]
+        att = attach_rate(p["category_l1"], p["price_band"],
+                          p["price_pct_of_product"], params, n)
+        sold = p["n_items_in_band"] * att
+        p["expected_attach"] = round(att, 5)
+        p["expected_plans_sold"] = round(sold, 2)
+        p["expected_premium_brl"] = round(sold * p["retail_price_brl"], 2)
+        p["expected_profit_brl"] = round(
+            sold * (p["retail_price_brl"] * (1 - g["admin_cost_pct_of_premium"])
+                    - p["pure_premium_brl"]), 2)
+
     return plans, skipped
 
 
@@ -257,7 +295,11 @@ def write_rate_card(con, plans):
             retail_price_brl      DOUBLE,
             price_pct_of_product  DOUBLE,
             implied_loss_ratio    DOUBLE,
-            price_capped          BOOLEAN
+            price_capped          BOOLEAN,
+            expected_attach       DOUBLE,
+            expected_plans_sold   DOUBLE,
+            expected_premium_brl  DOUBLE,
+            expected_profit_brl   DOUBLE
         )
     """)
     cols = [
@@ -266,7 +308,8 @@ def write_rate_card(con, plans):
         "cover_end_years", "exposure_years", "p_claim", "severity_ratio",
         "expected_severity_brl", "pure_premium_brl", "target_loss_ratio",
         "modeled_price_brl", "retail_price_brl", "price_pct_of_product",
-        "implied_loss_ratio", "price_capped",
+        "implied_loss_ratio", "price_capped", "expected_attach",
+        "expected_plans_sold", "expected_premium_brl", "expected_profit_brl",
     ]
     con.executemany(
         f"INSERT INTO dim_warranty_plans VALUES ({','.join(['?'] * len(cols))})",
@@ -291,11 +334,21 @@ def report(con, plans, skipped):
                ROUND(100 * price_pct_of_product, 1) AS pct_of_product,
                ROUND(100 * p_claim, 1)              AS pct_claim_prob,
                exposure_years,
+               ROUND(100 * expected_attach, 1)      AS pct_attach,
                price_capped
         FROM dim_warranty_plans
         ORDER BY category_l1, ref_price_brl, term_years
     """).df()
     print(df.to_string(index=False))
+
+    tot = con.execute("""
+        SELECT SUM(expected_plans_sold), SUM(expected_premium_brl),
+               SUM(expected_profit_brl)
+        FROM dim_warranty_plans
+    """).fetchone()
+    print(f"\n  Scenario totals (assumed demand): {tot[0]:,.0f} plans, "
+          f"R$ {tot[1]:,.0f} premium, R$ {tot[2]:,.0f} profit "
+          f"(premium - expected claims - admin cost)")
 
     capped = con.execute(
         "SELECT COUNT(*) FROM dim_warranty_plans WHERE price_capped"
